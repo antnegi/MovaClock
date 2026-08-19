@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zeropoint — Live World Clock &amp; IST Converter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F5F6F9;
+    --surface:#FFFFFF;
+    --ink:#12181F;
+    --ink-soft:#4B5563;
+    --muted:#8A94A6;
+    --border:#E3E6EB;
+    --accent:#1F3D5C;
+    --accent-soft:#E8EEF3;
+    --gold:#C9A227;
+    --gold-soft:#FBF3D9;
+    --dst-on-bg:#FCEFDD;
+    --dst-on-fg:#9A5B14;
+    --dst-off-bg:#EAF1EC;
+    --dst-off-fg:#3E7A63;
+    --dst-na-bg:#EEEFF2;
+    --dst-na-fg:#6B7280;
+    --shadow: 0 1px 2px rgba(18,24,31,0.05), 0 10px 28px -14px rgba(18,24,31,0.16);
+    --shadow-lg: 0 2px 4px rgba(18,24,31,0.05), 0 18px 40px -16px rgba(18,24,31,0.20);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;overflow:hidden;}
+  body{
+    background:
+      radial-gradient(circle at 12% -10%, #EEF2F7 0%, transparent 42%),
+      radial-gradient(circle at 100% 110%, #EDF1EE 0%, transparent 48%),
+      var(--bg);
+    color:var(--ink);
+    font-family:'Inter', sans-serif;
+    -webkit-font-smoothing:antialiased;
+    height:100vh;
+  }
+
+  .wrap{
+    max-width:1280px;
+    height:100vh;
+    margin:0 auto;
+    padding:clamp(14px,2.4vh,28px) 24px clamp(10px,1.6vh,18px);
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+  }
+
+  /* ---------- Header ---------- */
+  header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    flex-wrap:wrap;
+    gap:16px;
+    margin-bottom:clamp(10px,1.8vh,20px);
+    padding-bottom:clamp(10px,1.6vh,18px);
+    border-bottom:1px solid var(--border);
+    flex-shrink:0;
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin:0 0 6px;
+  }
+  h1{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:clamp(22px, 3vw, 34px);
+    font-weight:600;
+    margin:0;
+    letter-spacing:-0.01em;
+  }
+  .utc-now{ text-align:right; }
+  .utc-now .label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin-bottom:4px;
+  }
+  .utc-now .value{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:20px;
+    font-weight:500;
+    color:var(--accent);
+  }
+
+  .toggle-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-top:8px;
+  }
+  .toggle{
+    display:inline-flex;
+    border:1px solid var(--border);
+    border-radius:8px;
+    overflow:hidden;
+    background:var(--surface);
+  }
+  .toggle button{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    letter-spacing:.04em;
+    padding:7px 14px;
+    border:none;
+    background:transparent;
+    color:var(--muted);
+    cursor:pointer;
+    transition:background .15s ease, color .15s ease;
+  }
+  .toggle button.active{ background:var(--accent); color:#fff; }
+  button:focus-visible, select:focus-visible, input:focus-visible{
+    outline:2px solid var(--accent);
+    outline-offset:2px;
+  }
+
+  /* ---------- Convert status bar ---------- */
+  .convert-status{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:12px;
+    margin-bottom:clamp(10px,1.6vh,16px);
+    flex-shrink:0;
+  }
+  .convert-status .msg{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    color:var(--muted);
+  }
+  .convert-status .msg strong{
+    color:var(--accent);
+    font-weight:500;
+  }
+  .reset-btn{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11.5px;
+    letter-spacing:.03em;
+    padding:7px 13px;
+    border:1px solid var(--border);
+    border-radius:8px;
+    background:var(--surface);
+    color:var(--accent);
+    cursor:pointer;
+    transition:background .15s ease;
+  }
+  .reset-btn:hover{ background:var(--accent-soft); }
+
+  /* ---------- Columns ---------- */
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(6, 1fr);
+    grid-template-rows:auto;
+    gap:12px;
+    flex:0 0 auto;
+    margin-bottom:clamp(10px,1.6vh,16px);
+  }
+  @media (max-width: 1080px){
+    .grid{ grid-template-columns:repeat(3, 1fr); grid-template-rows:auto auto; }
+  }
+  @media (max-width: 640px){
+    .grid{ grid-template-columns:repeat(2, 1fr); grid-template-rows:auto auto auto; }
+  }
+  @media (max-width: 420px){
+    .grid{ grid-template-columns:1fr; grid-template-rows:none; overflow-y:auto; max-height:70vh; }
+  }
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:16px;
+    box-shadow:var(--shadow);
+    display:flex;
+    flex-direction:column;
+    height:100%;
+    min-height:0;
+    overflow:hidden;
+    position:relative;
+    transition:border-color .15s ease, box-shadow .2s ease, transform .2s ease;
+  }
+  .card::before{
+    content:'';
+    display:block;
+    height:3px;
+    width:100%;
+    background:var(--accent);
+    opacity:.16;
+  }
+  .card.is-ist::before{ background:var(--gold); opacity:.55; }
+  .card:hover{
+    box-shadow:var(--shadow-lg);
+    transform:translateY(-2px);
+  }
+  .card.is-source{
+    border-color:var(--accent);
+  }
+  .card.is-ist{
+    border:2px solid var(--gold);
+    box-shadow:var(--shadow), 0 0 0 3px rgba(201,162,39,0.12);
+  }
+  .ist-tag{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:9px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    color:#9A7D1E;
+    background:var(--gold-soft);
+    padding:2px 6px;
+    border-radius:5px;
+    margin-left:6px;
+    white-space:nowrap;
+  }
+
+  .clock-section{
+    padding:clamp(10px,1.8vh,18px) 14px clamp(8px,1.4vh,16px);
+    flex:1 1 auto;
+    min-height:0;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+  }
+  .card-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:8px;
+    margin-bottom:10px;
+    min-width:0;
+  }
+  .card-heading{ min-width:0; }
+  .city{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:14.5px;
+    font-weight:600;
+    line-height:1.2;
+    margin:0 0 3px;
+    min-height:2.4em;
+    overflow-wrap:break-word;
+  }
+  .region{
+    font-size:10.5px;
+    color:var(--muted);
+    margin:0;
+    line-height:1.25;
+    overflow-wrap:break-word;
+  }
+  .offset-badge{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10.5px;
+    color:var(--accent);
+    background:var(--accent-soft);
+    padding:3px 7px;
+    border-radius:6px;
+    white-space:nowrap;
+    flex-shrink:0;
+  }
+  .time{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:clamp(19px,2.6vh,26px);
+    font-weight:500;
+    letter-spacing:-0.01em;
+    margin-bottom:2px;
+    font-variant-numeric:tabular-nums;
+  }
+  .date{ font-size:11px; color:var(--ink-soft); margin-bottom:8px; }
+  .dst-pill{
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:9.5px;
+    letter-spacing:.02em;
+    padding:3px 8px 3px 6px;
+    border-radius:20px;
+  }
+  .dst-pill::before{
+    content:'';
+    width:6px;
+    height:6px;
+    border-radius:50%;
+    flex-shrink:0;
+  }
+  .dst-pill.on{ background:var(--dst-on-bg); color:var(--dst-on-fg); }
+  .dst-pill.on::before{ background:var(--dst-on-fg); }
+  .dst-pill.off{ background:var(--dst-off-bg); color:var(--dst-off-fg); }
+  .dst-pill.off::before{ background:var(--dst-off-fg); }
+  .dst-pill.na{ background:var(--dst-na-bg); color:var(--dst-na-fg); }
+  .dst-pill.na::before{ background:var(--dst-na-fg); }
+
+  .ist-diff{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10.5px;
+    color:var(--ink-soft);
+    margin-top:auto;
+    padding-top:8px;
+  }
+
+  .divider{ height:1px; background:var(--border); margin:0 16px; }
+
+  .convert-section{
+    padding:clamp(8px,1.4vh,14px) 14px clamp(10px,1.6vh,16px);
+    background:#FBFBFC;
+    border-radius:0 0 14px 14px;
+    flex-shrink:0;
+  }
+  .section-label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:9px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin:0 0 7px;
+  }
+  .c-date{
+    width:100%;
+    font-family:'Inter', sans-serif;
+    font-size:11.5px;
+    padding:6px 7px;
+    border:1px solid var(--border);
+    border-radius:7px;
+    background:var(--surface);
+    color:var(--ink);
+    margin-bottom:6px;
+  }
+  .c-time-row{
+    display:flex;
+    align-items:center;
+    gap:5px;
+    flex-wrap:wrap;
+  }
+  .c-hour, .c-min{
+    flex:1 1 32px;
+    min-width:0;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:14px;
+    text-align:center;
+    padding:6px 3px;
+    border:1px solid var(--border);
+    border-radius:7px;
+    background:var(--surface);
+    color:var(--ink);
+    font-variant-numeric:tabular-nums;
+  }
+  .c-colon{ font-family:'IBM Plex Mono', monospace; color:var(--muted); flex-shrink:0; }
+  .c-ampm{
+    flex:1 1 48px;
+    min-width:0;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    padding:6px 2px;
+    border:1px solid var(--border);
+    border-radius:7px;
+    background:var(--surface);
+    color:var(--ink);
+  }
+  input[type=number]::-webkit-inner-spin-button{ opacity:0.5; }
+
+  footer{
+    margin-top:clamp(8px,1.4vh,14px);
+    text-align:center;
+    font-size:11px;
+    color:var(--muted);
+    flex-shrink:0;
+  }
+
+  @media (prefers-reduced-motion: reduce){ *{ transition:none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <p class="eyebrow">Six zones · one reference: IST</p>
+      <h1>Zeropoint</h1>
+      <div class="toggle-row">
+        <div class="toggle" role="group" aria-label="Time format">
+          <button id="fmt12" class="active">12H</button>
+          <button id="fmt24">24H</button>
+        </div>
+      </div>
+    </div>
+    <div class="utc-now">
+      <div class="label">Coordinated Universal Time</div>
+      <div class="value" id="headerUtc">—</div>
+    </div>
+  </header>
+
+  <div class="convert-status">
+    <p class="msg">Converting from <strong id="sourceLabel">—</strong> · edit any zone's time below</p>
+    <button class="reset-btn" id="resetBtn">Reset to now</button>
+  </div>
+
+  <div class="grid" id="clockGrid"></div>
+
+  <footer>Designed and developed by Antriksh Singh Negi</footer>
+
+</div>
+
+<script>
+(function(){
+  const ZONES = [
+    { id:'America/Los_Angeles', city:'Los Angeles', region:'Pacific Time', short:'PT' },
+    { id:'America/Denver',      city:'Denver',      region:'Mountain Time', short:'MT' },
+    { id:'America/Chicago',     city:'Chicago',     region:'Central Time',  short:'CT' },
+    { id:'America/New_York',    city:'New York',    region:'Eastern Time',  short:'ET' },
+    { id:'UTC',                 city:'UTC',         region:'Coordinated Universal Time', short:'UTC' },
+    { id:'Asia/Kolkata',        city:'Mumbai / Delhi', region:'India Standard Time', short:'IST' },
+  ];
+
+  let use24h = false;
+  let instant = new Date();      // single source of truth for the convert tool
+  let sourceShort = null;        // which column's edit last drove `instant` (for the status label / highlight)
+  let suppressWrite = null;      // zone id currently being edited, so we don't clobber it mid-interaction
+
+  // ---------------- offset + DST helpers (fully dynamic, nothing hardcoded) ----------------
+  function getOffsetMinutes(date, timeZone){
+    const dtf = new Intl.DateTimeFormat('en-US', {
+      timeZone, hour12:false,
+      year:'numeric', month:'2-digit', day:'2-digit',
+      hour:'2-digit', minute:'2-digit', second:'2-digit'
+    });
+    const parts = dtf.formatToParts(date).reduce((acc,p)=>{ acc[p.type]=p.value; return acc; },{});
+    let hour = parseInt(parts.hour,10);
+    if(hour === 24) hour = 0;
+    const asUTC = Date.UTC(
+      parseInt(parts.year,10), parseInt(parts.month,10)-1, parseInt(parts.day,10),
+      hour, parseInt(parts.minute,10), parseInt(parts.second,10)
+    );
+    return (asUTC - date.getTime())/60000;
+  }
+
+  function isDST(now, timeZone){
+    const year = now.getUTCFullYear();
+    const jan = new Date(Date.UTC(year, 0, 15, 12, 0, 0));
+    const jul = new Date(Date.UTC(year, 6, 15, 12, 0, 0));
+    const offJan = getOffsetMinutes(jan, timeZone);
+    const offJul = getOffsetMinutes(jul, timeZone);
+    if(offJan === offJul) return null; // zone doesn't observe DST at all
+    const offNow = getOffsetMinutes(now, timeZone);
+    const standard = Math.min(offJan, offJul);
+    return offNow !== standard;
+  }
+
+  function formatOffset(mins){
+    const sign = mins >= 0 ? '+' : '−';
+    const hoursDecimal = Math.abs(mins)/60;
+    const label = Number.isInteger(hoursDecimal) ? hoursDecimal.toString() : hoursDecimal.toFixed(1);
+    return `UTC${sign}${label}`;
+  }
+
+  function formatIstDiff(mins){
+    // mins = target zone's offset MINUS IST's offset, in minutes (negative = zone is behind IST)
+    if(mins === 0) return 'Same time as IST';
+    const behind = mins < 0;
+    const abs = Math.abs(mins);
+    const h = Math.floor(abs/60);
+    const m = abs%60;
+    const clock = m ? `${h}:${String(m).padStart(2,'0')}` : `${h}:00`;
+    return `${clock} hours ${behind ? 'behind' : 'ahead of'} IST`;
+  }
+
+  function formatTime(date, timeZone){
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone, hour:'numeric', minute:'2-digit', second:'2-digit', hour12: !use24h
+    }).format(date);
+  }
+  function formatDate(date, timeZone){
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone, weekday:'short', month:'short', day:'numeric'
+    }).format(date);
+  }
+
+  function wallClockToUTC(y, mo, d, h, mi, timeZone){
+    let guess = new Date(Date.UTC(y, mo-1, d, h, mi));
+    for(let i=0;i<2;i++){
+      const off = getOffsetMinutes(guess, timeZone);
+      guess = new Date(Date.UTC(y, mo-1, d, h, mi) - off*60000);
+    }
+    return guess;
+  }
+
+  // ---------------- build columns ----------------
+  const grid = document.getElementById('clockGrid');
+  ZONES.forEach(z=>{
+    const card = document.createElement('div');
+    card.className = 'card' + (z.short === 'IST' ? ' is-ist' : '');
+    card.id = 'card-' + z.short;
+    card.innerHTML = `
+      <div class="clock-section">
+        <div class="card-top">
+          <div class="card-heading">
+            <p class="city">${z.region}${z.short==='IST' ? '<span class="ist-tag">Reference</span>' : ''}</p>
+            <p class="region">${z.city}</p>
+          </div>
+          <span class="offset-badge" data-role="offset">—</span>
+        </div>
+        <div class="time" data-role="time">—</div>
+        <div class="date" data-role="date">—</div>
+        <span class="dst-pill" data-role="dst">—</span>
+        <div class="ist-diff" data-role="ist-diff">—</div>
+      </div>
+      <div class="divider"></div>
+      <div class="convert-section">
+        <p class="section-label">Set / view time here</p>
+        <input type="date" class="c-date" data-role="c-date">
+        <div class="c-time-row">
+          <input type="number" class="c-hour" data-role="c-hour" min="1" max="12">
+          <span class="c-colon">:</span>
+          <input type="number" class="c-min" data-role="c-min" min="0" max="59">
+          <select class="c-ampm" data-role="c-ampm">
+            <option value="AM">AM</option>
+            <option value="PM">PM</option>
+          </select>
+        </div>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+
+  // ---------------- live clocks (independent of the converter) ----------------
+  function renderClocks(){
+    const now = new Date();
+    document.getElementById('headerUtc').textContent = formatTime(now, 'UTC') + ' UTC';
+    const istOffset = getOffsetMinutes(now, 'Asia/Kolkata'); // always computed fresh, never hardcoded
+
+    ZONES.forEach(z=>{
+      const card = document.getElementById('card-' + z.short);
+      card.querySelector('[data-role="time"]').textContent = formatTime(now, z.id);
+      card.querySelector('[data-role="date"]').textContent = formatDate(now, z.id);
+      const offMins = getOffsetMinutes(now, z.id);
+      card.querySelector('[data-role="offset"]').textContent = formatOffset(offMins);
+
+      const istDiffEl = card.querySelector('[data-role="ist-diff"]');
+      if(z.short === 'IST'){
+        istDiffEl.textContent = 'Reference zone';
+      } else {
+        istDiffEl.textContent = formatIstDiff(offMins - istOffset);
+      }
+
+      const dst = isDST(now, z.id);
+      const pill = card.querySelector('[data-role="dst"]');
+      if(dst === null){
+        pill.textContent = 'No DST observed';
+        pill.className = 'dst-pill na';
+      } else if(dst){
+        pill.textContent = 'Daylight saving active';
+        pill.className = 'dst-pill on';
+      } else {
+        pill.textContent = 'Standard time';
+        pill.className = 'dst-pill off';
+      }
+    });
+  }
+
+  // ---------------- convert boxes (all driven by `instant`) ----------------
+  function pad(n){ return String(n).padStart(2,'0'); }
+
+  function writeConvertBox(zone){
+    if(suppressWrite === zone.id) return; // don't clobber the field the user is actively editing
+    const card = document.getElementById('card-' + zone.short);
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: zone.id, year:'numeric', month:'2-digit', day:'2-digit',
+      hour:'2-digit', minute:'2-digit', hour12:false
+    }).formatToParts(instant).reduce((acc,p)=>{ acc[p.type]=p.value; return acc; },{});
+
+    let hour24 = parseInt(parts.hour,10);
+    if(hour24 === 24) hour24 = 0;
+
+    card.querySelector('[data-role="c-date"]').value = `${parts.year}-${parts.month}-${parts.day}`;
+
+    const ampmSel = card.querySelector('[data-role="c-ampm"]');
+    const hourInput = card.querySelector('[data-role="c-hour"]');
+    const minInput = card.querySelector('[data-role="c-min"]');
+
+    if(use24h){
+      ampmSel.style.display = 'none';
+      hourInput.min = 0; hourInput.max = 23;
+      hourInput.value = pad(hour24);
+    } else {
+      ampmSel.style.display = '';
+      hourInput.min = 1; hourInput.max = 12;
+      let h12 = hour24 % 12;
+      if(h12 === 0) h12 = 12;
+      hourInput.value = h12;
+      ampmSel.value = hour24 < 12 ? 'AM' : 'PM';
+    }
+    minInput.value = pad(parseInt(parts.minute,10));
+
+    card.classList.toggle('is-source', sourceShort === zone.short);
+  }
+
+  function renderAllConvertBoxes(){
+    ZONES.forEach(writeConvertBox);
+    document.getElementById('sourceLabel').textContent =
+      sourceShort ? ZONES.find(z=>z.short===sourceShort).city : 'current time';
+  }
+
+  function readConvertBoxAsInstant(zone){
+    const card = document.getElementById('card-' + zone.short);
+    const dateVal = card.querySelector('[data-role="c-date"]').value;
+    if(!dateVal) return null;
+    const [y, mo, d] = dateVal.split('-').map(Number);
+    let hourVal = parseInt(card.querySelector('[data-role="c-hour"]').value, 10);
+    const minVal = parseInt(card.querySelector('[data-role="c-min"]').value, 10);
+    if(isNaN(hourVal) || isNaN(minVal)) return null;
+
+    let hour24;
+    if(use24h){
+      hour24 = hourVal;
+    } else {
+      const ampm = card.querySelector('[data-role="c-ampm"]').value;
+      hour24 = hourVal % 12;
+      if(ampm === 'PM') hour24 += 12;
+    }
+    return wallClockToUTC(y, mo, d, hour24, minVal, zone.id);
+  }
+
+  function bindConvertInputs(){
+    ZONES.forEach(zone=>{
+      const card = document.getElementById('card-' + zone.short);
+      const fields = ['c-date','c-hour','c-min','c-ampm'].map(role => card.querySelector(`[data-role="${role}"]`));
+
+      fields.forEach(field=>{
+        field.addEventListener('focus', ()=>{ suppressWrite = zone.id; });
+        field.addEventListener('blur', ()=>{ if(suppressWrite === zone.id) suppressWrite = null; });
+        field.addEventListener('change', ()=>{
+          const newInstant = readConvertBoxAsInstant(zone);
+          if(newInstant){
+            instant = newInstant;
+            sourceShort = zone.short;
+            suppressWrite = null;
+            renderAllConvertBoxes();
+          }
+        });
+      });
+    });
+  }
+
+  // ---------------- format toggle ----------------
+  const fmt12 = document.getElementById('fmt12');
+  const fmt24 = document.getElementById('fmt24');
+  fmt12.addEventListener('click', ()=>{ use24h=false; fmt12.classList.add('active'); fmt24.classList.remove('active'); renderClocks(); renderAllConvertBoxes(); });
+  fmt24.addEventListener('click', ()=>{ use24h=true; fmt24.classList.add('active'); fmt12.classList.remove('active'); renderClocks(); renderAllConvertBoxes(); });
+
+  // ---------------- reset ----------------
+  document.getElementById('resetBtn').addEventListener('click', ()=>{
+    instant = new Date();
+    sourceShort = null;
+    renderAllConvertBoxes();
+  });
+
+  bindConvertInputs();
+  renderClocks();
+  renderAllConvertBoxes();
+  setInterval(renderClocks, 1000); // convert boxes are intentionally NOT on this interval — they hold whatever instant was set
+})();
+</script>
+</body>
+</html>
