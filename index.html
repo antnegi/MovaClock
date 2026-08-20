@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MovaClock &amp; IST Converter</title>
+<title>Zeropoint — Live World Clock &amp; IST Converter</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -161,7 +161,7 @@
   /* ---------- Columns ---------- */
   .grid{
     display:grid;
-    grid-template-columns:repeat(5, 1fr);
+    grid-template-columns:repeat(6, 1fr);
     grid-template-rows:auto;
     gap:12px;
     flex:0 0 auto;
@@ -252,6 +252,18 @@
     min-width:0;
   }
   .card-heading{ min-width:0; }
+  .zone-select{
+    width:100%;
+    font-family:'Space Grotesk', sans-serif;
+    font-size:13.5px;
+    font-weight:600;
+    padding:6px 8px;
+    border:1px solid var(--border);
+    border-radius:8px;
+    background:var(--accent-soft);
+    color:var(--accent);
+    cursor:pointer;
+  }
   .city{
     font-family:'Space Grotesk', sans-serif;
     font-size:14.5px;
@@ -396,7 +408,7 @@
   <header>
     <div>
       <p class="eyebrow">Six zones · one reference: IST</p>
-      <h1>MovaClock</h1>
+      <h1>Zeropoint</h1>
       <div class="toggle-row">
         <div class="toggle" role="group" aria-label="Time format">
           <button id="fmt12" class="active">12H</button>
@@ -423,12 +435,47 @@
 
 <script>
 (function(){
+  const CUSTOM_ZONE_OPTIONS = [
+    { id:'Etc/GMT+12',                    label:'International Date Line West' },
+    { id:'Pacific/Pago_Pago',             label:'Samoa Standard Time' },
+    { id:'Pacific/Honolulu',              label:'Hawaii-Aleutian Time' },
+    { id:'America/Anchorage',             label:'Alaska Time' },
+    { id:'America/Los_Angeles',           label:'Pacific Time' },
+    { id:'America/Denver',                label:'Mountain Time' },
+    { id:'America/Chicago',               label:'Central Time' },
+    { id:'America/New_York',              label:'Eastern Time' },
+    { id:'America/Halifax',               label:'Atlantic Time' },
+    { id:'America/Argentina/Buenos_Aires',label:'Argentina Time' },
+    { id:'Etc/GMT+2',                     label:'Mid-Atlantic Time' },
+    { id:'Atlantic/Azores',               label:'Azores Time' },
+    { id:'Europe/London',                 label:'Greenwich Mean Time' },
+    { id:'Europe/Paris',                  label:'Central European Time' },
+    { id:'Europe/Helsinki',               label:'Eastern European Time' },
+    { id:'Europe/Moscow',                 label:'Moscow Time' },
+    { id:'Asia/Dubai',                    label:'Gulf Standard Time' },
+    { id:'Asia/Karachi',                  label:'Pakistan Standard Time' },
+    { id:'Asia/Kolkata',                  label:'India Standard Time' },
+    { id:'Asia/Kathmandu',                label:'Nepal Time' },
+    { id:'Asia/Dhaka',                    label:'Bangladesh Standard Time' },
+    { id:'Asia/Yangon',                   label:'Myanmar Time' },
+    { id:'Asia/Bangkok',                  label:'Indochina Time' },
+    { id:'Asia/Shanghai',                 label:'China Standard Time' },
+    { id:'Asia/Tokyo',                    label:'Japan Standard Time' },
+    { id:'Australia/Adelaide',            label:'Australian Central Time' },
+    { id:'Australia/Sydney',              label:'Australian Eastern Time' },
+    { id:'Pacific/Guadalcanal',           label:'Solomon Islands Time' },
+    { id:'Pacific/Auckland',              label:'New Zealand Time' },
+  ];
+
+  const customZone = { id:'Europe/London', city:'Greenwich Mean Time', region:'Greenwich Mean Time', short:'CUST', isCustom:true };
+
   const ZONES = [
     { id:'America/Los_Angeles', city:'Los Angeles', region:'Pacific Time', short:'PT' },
     { id:'America/Denver',      city:'Denver',      region:'Mountain Time', short:'MT' },
     { id:'America/Chicago',     city:'Chicago',     region:'Central Time',  short:'CT' },
     { id:'America/New_York',    city:'New York',    region:'Eastern Time',  short:'ET' },
     { id:'Asia/Kolkata',        city:'Mumbai / Delhi', region:'India Standard Time', short:'IST' },
+    customZone,
   ];
 
   let use24h = false;
@@ -509,12 +556,18 @@
     const card = document.createElement('div');
     card.className = 'card' + (z.short === 'IST' ? ' is-ist' : '');
     card.id = 'card-' + z.short;
+
+    const headingHTML = z.isCustom
+      ? `<p class="section-label" style="margin-bottom:6px;">Custom zone</p>
+         <select class="zone-select" data-role="zone-select"></select>`
+      : `<p class="city">${z.region}</p>
+         <p class="region">${z.city}</p>`;
+
     card.innerHTML = `
       <div class="clock-section">
         <div class="card-top">
           <div class="card-heading">
-            <p class="city">${z.region}</p>
-            <p class="region">${z.city}</p>
+            ${headingHTML}
           </div>
           <span class="offset-badge" data-role="offset">—</span>
         </div>
@@ -539,6 +592,28 @@
       </div>
     `;
     grid.appendChild(card);
+
+    if(z.isCustom){
+      const sel = card.querySelector('[data-role="zone-select"]');
+      CUSTOM_ZONE_OPTIONS.forEach(opt=>{
+        const o = document.createElement('option');
+        o.value = opt.id;
+        const offMins = getOffsetMinutes(new Date(), opt.id);
+        const sign = offMins >= 0 ? '+' : '−';
+        const offLabel = (Math.abs(offMins)/60).toFixed(1);
+        o.textContent = `${opt.label} (UTC${sign}${offLabel})`;
+        if(opt.id === customZone.id) o.selected = true;
+        sel.appendChild(o);
+      });
+      sel.addEventListener('change', ()=>{
+        const chosen = CUSTOM_ZONE_OPTIONS.find(o=>o.id === sel.value);
+        customZone.id = chosen.id;
+        customZone.city = chosen.label;
+        customZone.region = chosen.label;
+        renderClocks();
+        renderAllConvertBoxes();
+      });
+    }
   });
 
   // ---------------- live clocks (independent of the converter) ----------------
