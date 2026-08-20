@@ -161,20 +161,44 @@
   /* ---------- Columns ---------- */
   .grid{
     display:grid;
-    grid-template-columns:repeat(6, 1fr);
+    grid-template-columns:repeat(5, 1fr);
     grid-template-rows:auto;
     gap:12px;
     flex:0 0 auto;
     margin-bottom:clamp(10px,1.6vh,16px);
   }
-  @media (max-width: 1080px){
+  @media (max-width: 980px){
     .grid{ grid-template-columns:repeat(3, 1fr); grid-template-rows:auto auto; }
   }
-  @media (max-width: 640px){
-    .grid{ grid-template-columns:repeat(2, 1fr); grid-template-rows:auto auto auto; }
-  }
-  @media (max-width: 420px){
-    .grid{ grid-template-columns:1fr; grid-template-rows:none; overflow-y:auto; max-height:70vh; }
+  @media (max-width: 700px){
+    html,body{ height:auto; overflow:auto; }
+    body{ height:auto; min-height:100vh; }
+    .wrap{
+      height:auto;
+      min-height:100vh;
+      justify-content:flex-start;
+      padding:18px 16px 28px;
+    }
+    header{ align-items:flex-start; gap:12px; }
+    .utc-now{ text-align:left; }
+    .convert-status{ flex-direction:column; align-items:stretch; }
+    .convert-status .msg{ order:2; }
+    .reset-btn{ width:100%; padding:10px; order:1; }
+    .grid{
+      grid-template-columns:1fr;
+      grid-template-rows:none;
+      gap:14px;
+    }
+    .card{ height:auto; }
+    .clock-section{ padding:16px 16px 14px; }
+    .city{ min-height:0; font-size:16px; }
+    .time{ font-size:30px; }
+    .date{ font-size:12.5px; }
+    .convert-section{ padding:14px 16px 16px; }
+    .c-date{ padding:9px 10px; font-size:13px; }
+    .c-hour, .c-min{ padding:9px 4px; font-size:16px; }
+    .c-ampm{ padding:9px 4px; font-size:12px; }
+    footer{ margin-top:20px; }
   }
 
   .card{
@@ -209,18 +233,6 @@
   .card.is-ist{
     border:2px solid var(--gold);
     box-shadow:var(--shadow), 0 0 0 3px rgba(201,162,39,0.12);
-  }
-  .ist-tag{
-    font-family:'IBM Plex Mono', monospace;
-    font-size:9px;
-    letter-spacing:.06em;
-    text-transform:uppercase;
-    color:#9A7D1E;
-    background:var(--gold-soft);
-    padding:2px 6px;
-    border-radius:5px;
-    margin-left:6px;
-    white-space:nowrap;
   }
 
   .clock-section{
@@ -416,7 +428,6 @@
     { id:'America/Denver',      city:'Denver',      region:'Mountain Time', short:'MT' },
     { id:'America/Chicago',     city:'Chicago',     region:'Central Time',  short:'CT' },
     { id:'America/New_York',    city:'New York',    region:'Eastern Time',  short:'ET' },
-    { id:'UTC',                 city:'UTC',         region:'Coordinated Universal Time', short:'UTC' },
     { id:'Asia/Kolkata',        city:'Mumbai / Delhi', region:'India Standard Time', short:'IST' },
   ];
 
@@ -502,7 +513,7 @@
       <div class="clock-section">
         <div class="card-top">
           <div class="card-heading">
-            <p class="city">${z.region}${z.short==='IST' ? '<span class="ist-tag">Reference</span>' : ''}</p>
+            <p class="city">${z.region}</p>
             <p class="region">${z.city}</p>
           </div>
           <span class="offset-badge" data-role="offset">—</span>
